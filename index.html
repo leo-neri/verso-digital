@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR" class="is-loading">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verso Digital — Estratégia, marca e presença digital</title>
+  <meta name="description" content="A Verso é uma agência de estratégia, branding e presença digital para marcas que querem ser lembradas.">
+  <script>
+    /* The opening animation is for the first visit. Once it has played in this tab, reloads (F5) and
+       returning to the site skip it. This runs before anything is painted, so the page can show up
+       already in its final state: no loader, no "hidden until ready". (A reload on a case page keeps
+       the hidden state until the case itself is restored.) The scroll position is put back by the
+       page, not by the browser, which would do it before the content exists. */
+    try {
+      history.scrollRestoration = 'manual';
+      if (sessionStorage.getItem('verso-intro') === '1') {
+        var r = document.documentElement;
+        r.classList.add('skip-intro');
+        if (!/^#\/cases\//.test(location.hash)) r.classList.remove('is-loading');
+      }
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- fixed, heavily blurred backdrop; a dark scrim keeps text readable on top -->
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop__img"></div>
+    <div class="backdrop__sharp" id="backdropSharp"></div>
+    <div class="backdrop__scrim" id="backdropScrim"></div>
+  </div>
+
+  <!-- loader: a white sheet with the wordmark typed on it. The centre of the "o" is a hole in the
+       sheet that shows the sharp photo; on load that hole grows until it uncovers the page.
+       loader.js draws the letters into #logoLayer and the aperture into #holeLayer. -->
+  <svg class="loader" id="loader" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <mask id="sheetMask" maskUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
+        <rect width="100%" height="100%" fill="#fff"/>
+        <g id="holeLayer"></g>
+        <ellipse id="ellipseHole" fill="#000" opacity="0"/>
+      </mask>
+    </defs>
+    <rect width="100%" height="100%" fill="#fff" mask="url(#sheetMask)"/>
+    <g id="logoLayer"></g>
+  </svg>
+
+  <!-- Desktop header: logo on the left, navigation on the right. Phones get the island menu below instead. -->
+  <header class="header" id="header">
+    <a class="logo" href="#top" data-scroll aria-label="Verso Digital — início"></a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#cases" data-scroll>Cases</a>
+      <a href="#sobre" data-scroll>Sobre</a>
+      <a href="#contato" data-scroll>Contato</a>
+      <a href="https://wa.me/5511971240071?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Verso%20Digital%20e%20gostaria%20de%20conversar%20sobre%20a%20minha%20marca." target="_blank" rel="noopener" data-external>WhatsApp</a>
+    </nav>
+  </header>
+
+  <!-- Phone menu, "dynamic island" style: a trapezoid with the logo hangs from the top edge, a button of the
+       same size floats at the bottom. Both are windows onto the sharp photo (see menu.js). -->
+  <a class="island" id="island" href="#top" aria-label="Verso Digital — início">
+    <span class="island__shadow" aria-hidden="true"></span>
+    <span class="island__shape"><span class="island__logo"></span></span>
+    <svg class="island__edge" viewBox="0 0 145 41" width="145" height="41" aria-hidden="true"><path d="M0 0 C7.5 0 11.25 2.7 13.75 8 L17.5 27.6 C19.4 35.6 25 41 35 41 L110 41 C120 41 125.6 35.6 127.5 27.6 L131.25 8 C133.75 2.7 137.5 0 145 0" fill="none"/></svg>
+  </a>
+
+  <div class="menu-veil" id="menuVeil" aria-hidden="true"></div>
+  <nav class="menu" id="menu" aria-label="Principal" aria-hidden="true">
+    <a href="#cases">Cases</a>
+    <a href="#sobre">Sobre</a>
+    <a href="#contato">Contato</a>
+    <a href="https://wa.me/5511971240071?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Verso%20Digital%20e%20gostaria%20de%20conversar%20sobre%20a%20minha%20marca." target="_blank" rel="noopener" data-external>WhatsApp</a>
+  </nav>
+  <div class="dock" id="dock">
+    <button class="dock__btn" id="dockBtn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Abrir menu">
+      <span class="dock__icon" aria-hidden="true"><i></i><i></i></span>
+    </button>
+  </div>
+
+  <main id="top">
+    <!-- Hero: curved WebGL carousel -->
+    <section class="hero" id="hero">
+      <div class="stage" id="stage" aria-label="Cases selecionados"></div>
+
+      <div class="hero__ui">
+        <span class="hint" id="hint">Arraste ou use ← →</span>
+      </div>
+    </section>
+
+    <!-- Everything below the fold sits on one calm sheet of paper, so the work can be the loud part -->
+    <div class="paper">
+
+      <!-- Quem somos -->
+      <section class="intro" id="sobre">
+        <p class="eyebrow">Verso Digital · Estratégia, marca e presença</p>
+        <h2 class="manifesto" id="manifesto">
+          Somos a Verso. Primeiro decidimos o que dizer<i class="pill-img" data-pos="12% 30%"></i>, depois como parecer<i class="pill-img" data-pos="78% 62%"></i> e, por fim, como estar presente todos os dias<i class="pill-img" data-pos="45% 85%"></i>. É um trabalho que acontece em ordem e que o público só enxerga no final, quando tudo parece óbvio.
+        </h2>
+
+        <div class="quiet">
+          <p class="quiet__label">Sobre este site</p>
+          <p class="quiet__text">Nossa identidade é forte, mas o site é discreto de propósito. Tons neutros, tipografia calma e muito respiro: aqui o protagonista é o trabalho dos nossos clientes. A gente só arma o palco.</p>
+        </div>
+      </section>
+
+      <!-- Cases -->
+      <section class="cases" id="cases">
+        <header class="section-head">
+          <h2 class="section-title">Cases</h2>
+          <p class="section-note">Quatro histórias, quatro jeitos de uma marca ganhar presença.</p>
+        </header>
+        <div class="cases__grid" id="casesGrid"></div>
+      </section>
+
+      <!-- Criadoras -->
+      <section class="team" id="criadoras">
+        <header class="section-head">
+          <h2 class="section-title">Quem está por trás</h2>
+          <p class="section-note">Duas fundadoras, uma só régua: clareza antes de ruído.</p>
+        </header>
+        <div class="team__cards">
+          <article class="person">
+            <div class="person__photo"><img src="assets/marina.jpg" alt="Marina Paiva" width="724" height="904" loading="lazy"></div>
+            <div class="person__body">
+              <span class="person__role">Co-founder · Estratégia</span>
+              <h3 class="person__name">Marina Paiva</h3>
+              <p class="person__bio">Veio do marketing digital de marcas como Schutz, Bloomberg e Genial Investimentos, onde cuidou de eventos, conteúdo, seeding e monitoramento de campanhas. Fundou a Verso para dar às marcas uma presença digital que só elas poderiam ter.</p>
+            </div>
+          </article>
+          <article class="person">
+            <div class="person__photo"><img src="assets/maria-eduarda.jpg" alt="Maria Eduarda Franco" width="724" height="904" loading="lazy"></div>
+            <div class="person__body">
+              <span class="person__role">Co-founder · Direção criativa</span>
+              <h3 class="person__name">Maria Eduarda Franco</h3>
+              <p class="person__bio">Publicitária com pós em direção de arte, passou por agências e startups como Iguatemi, Naked Nuts e NIINI. Cuida da visão criativa: traduz o que cada marca é em campanhas e identidades que fazem sentido para ela, e só para ela.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Serviços -->
+      <section class="services" id="servicos">
+        <header class="section-head">
+          <h2 class="section-title">O que fazemos</h2>
+          <p class="section-note">Três frentes que se encaixam. Dá para começar por qualquer uma.</p>
+        </header>
+        <ul class="acc" id="acc">
+          <li class="acc__item is-open">
+            <button class="acc__head" type="button" aria-expanded="true">
+              <span class="acc__n">01</span>
+              <span class="acc__title">Estratégia</span>
+              <span class="acc__lead">Onde a marca decide o que dizer.</span>
+              <span class="acc__icon" aria-hidden="true"></span>
+            </button>
+            <div class="acc__panel"><div class="acc__inner">
+              <p>Posicionamento, narrativa e plano de crescimento, para que cada decisão de comunicação tenha um motivo.</p>
+              <ul class="tags"><li>Posicionamento de marca</li><li>Estratégia de comunicação</li><li>Planejamento de conteúdo</li><li>Consultoria estratégica</li><li>Lançamentos</li></ul>
+            </div></div>
+          </li>
+          <li class="acc__item">
+            <button class="acc__head" type="button" aria-expanded="false">
+              <span class="acc__n">02</span>
+              <span class="acc__title">Branding &amp; Direção criativa</span>
+              <span class="acc__lead">Onde a marca decide como parecer.</span>
+              <span class="acc__icon" aria-hidden="true"></span>
+            </button>
+            <div class="acc__panel"><div class="acc__inner">
+              <p>Identidade, universo visual e voz, com a mesma assinatura em cada ponto de contato, do selo à embalagem.</p>
+              <ul class="tags"><li>Branding</li><li>Identidade visual</li><li>Naming</li><li>Tom de voz</li><li>Direção criativa</li><li>Direção de campanhas</li><li>Embalagens</li><li>Direção de conteúdo</li></ul>
+            </div></div>
+          </li>
+          <li class="acc__item">
+            <button class="acc__head" type="button" aria-expanded="false">
+              <span class="acc__n">03</span>
+              <span class="acc__title">Execução &amp; Gestão</span>
+              <span class="acc__lead">Onde a marca aparece todos os dias.</span>
+              <span class="acc__icon" aria-hidden="true"></span>
+            </button>
+            <div class="acc__panel"><div class="acc__inner">
+              <p>A rotina que mantém a marca viva: planejamos, produzimos, publicamos e medimos, sem deixar a identidade escapar.</p>
+              <ul class="tags"><li>Social media</li><li>Planejamento editorial</li><li>Produção de conteúdo</li><li>Design</li><li>Motion design</li><li>Foto e vídeo</li><li>Gestão de comunidade</li><li>Tráfego pago</li><li>Relatórios e otimização</li><li>Produção executiva</li></ul>
+            </div></div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Marcas -->
+      <section class="brands" aria-label="Marcas com quem já trabalhamos">
+        <p class="eyebrow brands__label">Marcas com quem já trabalhamos</p>
+        <div class="marquee">
+          <div class="marquee__track" id="marquee"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Contato -->
+  <footer class="footer" id="contato">
+    <div class="footer__top">
+      <p class="eyebrow eyebrow--light">Contato</p>
+      <h2 class="footer__title">Vamos conversar sobre a sua marca?</h2>
+    </div>
+
+    <div class="footer__cols">
+      <form class="form" id="contactForm" novalidate>
+        <label class="field"><span>Seu nome</span><input name="nome" type="text" autocomplete="name" required></label>
+        <label class="field"><span>E-mail</span><input name="email" type="email" autocomplete="email" required></label>
+        <label class="field"><span>Conte um pouco sobre a marca</span><textarea name="mensagem" rows="2" required></textarea></label>
+        <button class="btn" type="submit"><span class="btn__label">Enviar mensagem</span><span class="btn__arrow" aria-hidden="true">→</span></button>
+        <p class="form__ok" id="formOk" role="status" hidden>Recebido! Respondemos por aqui em breve.</p>
+      </form>
+
+      <div class="direct">
+        <p class="direct__label">Ou fale direto</p>
+        <a class="direct__link" href="mailto:contato@versodigitalagency.com">contato@versodigitalagency.com</a>
+        <a class="direct__link" href="https://wa.me/5511971240071" target="_blank" rel="noopener">+55 11 97124-0071</a>
+        <a class="direct__link" href="https://instagram.com/versodigital_" target="_blank" rel="noopener">@versodigital_</a>
+      </div>
+    </div>
+
+    <div class="footer__mark" id="footerMark" aria-hidden="true"></div>
+    <div class="footer__row">
+      <span>© 2026 Verso Digital</span>
+      <a href="#top" data-scroll>Voltar ao topo ↑</a>
+    </div>
+  </footer>
+
+  <!-- Case page: opens over the site when a case is clicked (see case.js) -->
+  <div class="cd" id="case" hidden role="dialog" aria-label="Case">
+    <button class="cd-ball" id="cdBack" type="button" aria-label="Fechar case">
+      <span class="cd-ball__x" aria-hidden="true"><i></i><i></i></span>
+    </button>
+    <div id="cdContent"></div>
+  </div>
+
+  <div class="cursor" id="cursor" aria-hidden="true"><span id="cursorLabel">Arraste</span></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+  <script src="projects.js"></script>
+  <script src="logo.js"></script>
+  <script src="loader.js"></script>
+  <script src="nudge.js"></script>
+  <script src="carousel.js"></script>
+  <script src="sections.js"></script>
+  <script src="motion.js"></script>
+  <script src="case.js"></script>
+  <script src="main.js"></script>
+  <script src="menu.js"></script>
+</body>
+</html>

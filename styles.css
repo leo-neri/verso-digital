@@ -1,0 +1,627 @@
+:root {
+  --bg: #06090c;
+  --bg-2: rgba(6, 9, 12, 0.55);
+  --fg: #f6f1ea;
+  --fg-dim: rgba(246, 241, 234, 0.68);
+  --line: rgba(246, 241, 234, 0.18);
+  --glass: rgba(246, 241, 234, 0.09);
+  --glass-line: rgba(246, 241, 234, 0.2);
+  --blur: 56px;           /* backdrop blur */
+  --scrim: 0.3;           /* how much the backdrop is darkened (0–1) */
+  --sat: 1.5;             /* backdrop colour boost once blurred */
+  --bright: 1.55;
+  --contrast: 1.1;
+  --gutter: clamp(20px, 2.4vw, 36px);
+  --font: 'Inter Tight', 'Helvetica Neue', Arial, sans-serif;
+  --serif: 'Cormorant Garamond', 'Times New Roman', serif;
+  /* the paper below the fold: the brand's warm grey, forest green and near-black ink */
+  --paper: #e3e3dc;
+  --paper-2: #d8d8cf;
+  --ink: #1c2119;
+  --ink-dim: rgba(28, 33, 25, 0.64);
+  --rule: rgba(28, 33, 25, 0.16);
+  --forest: #232f1e;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--bg); color-scheme: dark; scrollbar-gutter: stable; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font);
+  font-weight: 400;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+/* ---------- touch feedback ---------- */
+.case__media, .person, .btn, .cd-next__link, .cd-img { scale: 1; transition-property: scale, transform, gap, background-color; }
+.case__media:active, .person:active, .cd-next__link:active, .cd-img:active { scale: 0.975; transition-duration: 0.2s; }
+.btn:active { scale: 0.95; transition-duration: 0.2s; }
+.case__media::after, .person::after, .cd-next__link::after, .cd-img::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.5s;
+  background: radial-gradient(circle at var(--px, 50%) var(--py, 50%), rgba(255, 255, 255, 0.34), transparent 55%);
+}
+.person::after { background: radial-gradient(circle at var(--gx, var(--px, 50%)) var(--gy, var(--py, 50%)), rgba(255, 255, 255, 0.4), transparent 58%); opacity: var(--glare, 0); }
+.case__media:active::after, .person:active::after, .cd-next__link:active::after, .cd-img:active::after { opacity: 1; transition-duration: 0.1s; }
+.person, .cd-next__link { position: relative; }
+.btn { position: relative; overflow: hidden; }
+.btn::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; transform: translateX(-130%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+}
+.btn:active::after { transform: translateX(130%); transition: transform 0.7s cubic-bezier(0.19, 1, 0.22, 1); }
+.menu a:active, .acc__head:active { opacity: 0.6; }
+/* headings: words rise out of a mask (motion.js) */
+.mw { display: inline-block; overflow: hidden; vertical-align: top; padding: 0 0.04em 0.14em; margin: 0 -0.04em -0.14em; }
+.mw__in { display: inline-block; will-change: transform; }
+.backdrop__img { will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .btn::after { display: none; } }
+
+/* ---------- backdrop ---------- */
+.backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: var(--bg); }
+/* Three static layers. Nothing here is re-filtered per frame: the loader only fades the sharp
+   layer out and the scrim in, which the compositor does for free. */
+.backdrop__img, .backdrop__sharp {
+  position: absolute; inset: -12%;   /* same crop on both, and a bleed so the blur never shows an edge */
+  background: url('bg.webp') center / cover no-repeat;
+  transform: translateZ(0);
+}
+.backdrop__img { filter: blur(var(--blur)) saturate(var(--sat)) brightness(var(--bright)) contrast(var(--contrast)); }
+.backdrop__sharp { will-change: opacity; }
+.backdrop__scrim {
+  position: absolute; inset: 0; opacity: 0; will-change: opacity;
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgba(6, 9, 12, calc(var(--scrim) * 0.55)), rgba(6, 9, 12, var(--scrim)) 70%),
+    linear-gradient(to bottom, rgba(6, 9, 12, calc(var(--scrim) * 1.15)), transparent 22%, transparent 70%, rgba(6, 9, 12, calc(var(--scrim) * 1.6)));
+}
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+ul, dl, dd, p, h2 { margin: 0; padding: 0; }
+ul { list-style: none; }
+
+.eyebrow { font-size: 14px; color: var(--fg-dim); letter-spacing: 0.01em; }
+
+/* ---------- loader ---------- */
+.loader { position: fixed; inset: 0; z-index: 100; width: 100%; height: 100%; pointer-events: none; }
+
+/* While the ellipse is blinking the photo is sharp and nothing else is on screen. Scrolling is
+   locked from JS, not with overflow:hidden: hiding the scrollbar and bringing it back later
+   changes the viewport width, which made the photo slide sideways when the page opened.
+   The scrollbar is painted white so it vanishes into the white sheet. */
+html.is-loading { scrollbar-color: #fff #fff; }
+html.skip-intro .loader { display: none; }
+/* a reload shows the finished page at once: blurred photo, menu pieces in place, nothing sliding in */
+html.skip-intro #backdropSharp { display: none; }
+html.skip-intro #backdropScrim { opacity: 1; }
+html.skip-intro .island, html.skip-intro .dock { transition: none; }
+html.is-loading main,
+html.is-loading .footer { visibility: hidden; }
+
+/* ---------- hero ---------- */
+.hero { position: relative; height: 100vh; height: 100svh; min-height: 560px; overflow: hidden; }
+.stage { position: absolute; inset: 0; touch-action: pan-y; cursor: none; }
+.stage canvas { display: block; width: 100%; height: 100%; }
+@media (pointer: coarse) { .stage { cursor: auto; } }
+
+.hero__ui { position: absolute; inset: 0; pointer-events: none; }
+.hint { position: absolute; left: var(--gutter); bottom: 42px; font-size: 13px; color: var(--fg-dim); }
+
+/* ---------- cursor ---------- */
+.cursor {
+  position: fixed; left: 0; top: 0; z-index: 80; pointer-events: none;
+  width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(242, 242, 242, 0.92); color: #0a0a0a;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; transform: scale(0);
+  mix-blend-mode: normal;
+}
+@media (pointer: coarse) { .cursor { display: none; } }
+
+.cursor.is-dark { background: var(--ink); color: var(--paper); }
+
+/* ---------- paper ----------
+   Every block below is about one screen tall with its content centred, and sizes are tied to the
+   viewport height (svh) as well as its width, so a whole idea fits in the window at once.
+   sections.js adds a light "gravity" that lines a block up when you stop a little off. */
+.paper {
+  position: relative; z-index: 2;
+  background: var(--paper); color: var(--ink);
+  border-radius: 32px 32px 0 0;
+}
+.paper > section, .case-row {
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: clamp(76px, 10.5svh, 128px) var(--gutter) clamp(24px, 5svh, 72px);
+}
+.paper .eyebrow { color: var(--ink-dim); }
+.eyebrow { font-size: 14px; letter-spacing: 0.02em; }
+.eyebrow--light { color: rgba(227, 227, 220, 0.62); }
+
+.section-head {
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+  padding-bottom: clamp(12px, 2.4svh, 22px); margin-bottom: clamp(18px, 4svh, 56px);
+  border-bottom: 1px solid var(--rule);
+}
+.section-title { font-family: var(--serif); font-weight: 500; font-size: clamp(34px, min(5.4vw, 9svh), 84px); line-height: 0.98; letter-spacing: -0.01em; }
+.section-note { max-width: 30ch; text-align: right; font-size: 15px; color: var(--ink-dim); }
+
+/* ---------- who we are ---------- */
+.manifesto {
+  margin-top: clamp(14px, 3svh, 28px); max-width: 24em;
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(30px, min(4.7vw, 7.6svh), 78px); line-height: 1.1; letter-spacing: -0.012em;
+}
+.pill-img {
+  display: inline-block; width: 1.9em; height: 0.66em; margin: 0 0.1em; vertical-align: -0.03em;
+  border-radius: 999px;
+  background: url('bg.webp') var(--pos, 50% 50%) / 380% auto;
+  box-shadow: inset 0 0 0 1px rgba(28, 33, 25, 0.14);
+}
+.quiet {
+  margin-top: clamp(32px, 9svh, 120px); padding-top: clamp(16px, 2.6svh, 26px); border-top: 1px solid var(--rule);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--gutter);
+}
+.quiet__label { font-size: 14px; color: var(--ink-dim); }
+.quiet__text { max-width: 44ch; font-size: clamp(16px, min(1.7vw, 2.9svh), 24px); line-height: 1.45; }
+
+/* ---------- cases ----------
+   The heading plus the first case, then a pair, then one more: each group is a screen. */
+.paper > .cases { display: block; min-height: 0; padding: 0; }
+.cases .section-head { margin: 0; padding: clamp(76px, 10svh, 120px) var(--gutter) clamp(12px, 2.4svh, 22px); border-bottom: 0; }
+.cases .section-head::after { content: none; }
+.case-row {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-content: center;
+}
+.case-row--first { min-height: 0; padding-top: clamp(12px, 3svh, 28px); }
+.c-wide { grid-column: 1 / -1; --mh: 43svh; --ar: 16 / 8; }
+.c-left { grid-column: 1 / span 6; --mh: 50svh; --ar: 4 / 5; }
+.c-right { grid-column: 7 / span 6; margin-top: clamp(24px, 6svh, 80px); --mh: 50svh; --ar: 4 / 5; }
+.c-center { grid-column: 3 / span 8; --mh: 46svh; --ar: 3 / 2; }
+.case__link { display: block; }
+.case__media {
+  position: relative; overflow: hidden; height: var(--mh, 50svh); width: 100%;
+  border-radius: 20px; background: #1d1f1b;
+  box-shadow: 0 30px 70px rgba(28, 33, 25, 0.18);
+  transition: transform 0.9s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.case:hover .case__media { transform: translateY(-6px); }
+.case__img {
+  position: absolute; inset: -8%;
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.13) 50%, transparent calc(50% + 1px)),
+    linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.13) 50%, transparent calc(50% + 1px)),
+    radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.26), transparent 55%),
+    linear-gradient(135deg, var(--c1), var(--c2));
+}
+.case__ph { position: absolute; left: 20px; top: 18px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
+.case__stat {
+  position: absolute; left: 18px; bottom: 18px; max-width: calc(100% - 36px);
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 16px 13px;
+  color: #fff; border-radius: 14px;
+  background: rgba(246, 241, 234, 0.16); border: 1px solid rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+.case__stat b { font-family: var(--serif); font-weight: 500; font-size: 34px; line-height: 1; }
+.case__stat span { font-size: 13px; max-width: 24ch; opacity: 0.9; }
+.case__meta { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-top: clamp(10px, 2svh, 18px); }
+.case__name { font-family: var(--serif); font-weight: 500; font-size: clamp(26px, min(2.6vw, 4.6svh), 40px); line-height: 1; }
+.case__tag { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); }
+.case__text { margin-top: 8px; max-width: 46ch; font-size: clamp(14px, 1.9svh, 16px); color: var(--ink-dim); }
+
+/* ---------- team: two wide cards, photo beside text, so faces and words share one screen ---------- */
+.team__cards {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gutter);
+  height: clamp(340px, 64svh, 660px);
+}
+.person { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); background: var(--paper-2); border-radius: 24px; overflow: hidden; min-height: 0; }
+.person__photo { overflow: hidden; min-height: 0; }
+.person__photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; transform-origin: center 30%; }
+.person__body { display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; padding: clamp(16px, 2.2vw, 34px); }
+.person__role { display: flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); }
+.person__role::before {
+  content: ''; flex: none; width: 34px; height: 13px; border-radius: 999px;
+  background: url('bg.webp') 60% 40% / 420% auto;
+}
+.person__name { margin-top: clamp(8px, 1.6svh, 14px); font-family: var(--serif); font-weight: 500; font-size: clamp(28px, min(2.9vw, 5.2svh), 46px); line-height: 1; }
+.person__bio { margin-top: clamp(10px, 1.8svh, 16px); font-size: clamp(13px, 1.85svh, 16px); line-height: 1.5; color: var(--ink-dim); }
+
+/* ---------- services ---------- */
+.acc { border-bottom: 1px solid var(--rule); }
+.acc__item { border-top: 1px solid var(--rule); }
+.acc__head {
+  display: grid; grid-template-columns: 56px minmax(0, 1.5fr) minmax(0, 1fr) 28px; gap: var(--gutter); align-items: center;
+  width: 100%; padding: clamp(14px, 3svh, 34px) 0; text-align: left;
+}
+.acc__n { font-size: 14px; color: var(--ink-dim); }
+.acc__title { font-family: var(--serif); font-weight: 500; font-size: clamp(26px, min(4vw, 7svh), 62px); line-height: 1.04; letter-spacing: -0.01em; transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1); }
+.acc__head:hover .acc__title { transform: translateX(10px); }
+.acc__lead { font-size: 15px; color: var(--ink-dim); }
+.acc__icon { position: relative; width: 22px; height: 22px; justify-self: end; transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1); }
+.acc__icon::before, .acc__icon::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: currentColor; }
+.acc__icon::after { transform: rotate(90deg); }
+.is-open .acc__icon { transform: rotate(45deg); }
+.acc__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.7s cubic-bezier(0.19, 1, 0.22, 1); }
+.is-open .acc__panel { grid-template-rows: 1fr; }
+.acc__inner { min-height: 0; overflow: hidden; padding-left: calc(56px + var(--gutter)); }
+.acc__inner p { max-width: 52ch; font-size: clamp(16px, min(1.5vw, 2.6svh), 21px); line-height: 1.45; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin: clamp(12px, 2.4svh, 22px) 0 clamp(16px, 3.4svh, 40px); }
+.tags li { padding: 6px 14px; font-size: 14px; border: 1px solid var(--rule); border-radius: 999px; }
+
+/* ---------- brands ---------- */
+.paper > .brands { min-height: 48svh; padding-left: 0; padding-right: 0; }
+.brands__label { padding: 0 var(--gutter); margin-bottom: 28px; }
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent); }
+.marquee__track { display: flex; align-items: center; gap: 36px; width: max-content; animation: marquee 70s linear infinite; }
+.marquee:hover .marquee__track { animation-play-state: paused; }
+.marquee__track span { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(30px, min(4.2vw, 8svh), 62px); white-space: nowrap; }
+.marquee__track .dot { flex: none; width: 34px; height: 12px; border-radius: 999px; background: url('bg.webp') 50% 55% / 400% auto; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+/* ---------- contact ---------- */
+.footer {
+  position: relative; z-index: 2; background: var(--forest); color: var(--paper); overflow: hidden;
+  min-height: 100svh; display: flex; flex-direction: column; justify-content: center;
+  padding: clamp(64px, 8svh, 100px) var(--gutter) 20px;
+}
+.footer__title { margin-top: clamp(10px, 2svh, 24px); font-family: var(--serif); font-weight: 400; font-size: clamp(32px, min(6vw, 7.4svh), 108px); line-height: 1; letter-spacing: -0.015em; }
+.footer__cols { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 100px); margin-top: clamp(16px, 3.4svh, 56px); }
+.form { display: grid; gap: clamp(10px, 2.2svh, 22px); align-content: start; }
+.field { display: grid; gap: 2px; }
+.field span { font-size: 13px; color: rgba(227, 227, 220, 0.62); }
+.field input, .field textarea {
+  width: 100%; padding: 8px 0 10px; font: inherit; font-size: clamp(16px, 2.6svh, 20px); color: var(--paper); background: transparent;
+  border: 0; border-bottom: 1px solid rgba(227, 227, 220, 0.3); border-radius: 0; resize: none; outline: none;
+  transition: border-color 0.4s;
+}
+.field input:focus, .field textarea:focus { border-bottom-color: var(--paper); }
+.field.is-error input, .field.is-error textarea { border-bottom-color: #e58b7a; }
+.field.is-error span { color: #e58b7a; }
+.btn {
+  justify-self: start; display: inline-flex; align-items: center; gap: 14px; padding: 14px 24px;
+  font-size: 16px; font-weight: 500; color: var(--forest); background: var(--paper); border-radius: 999px;
+  transition: gap 0.5s cubic-bezier(0.19, 1, 0.22, 1), background-color 0.4s;
+}
+.btn:hover { gap: 22px; background: #fff; }
+.form__ok { font-size: 15px; color: rgba(227, 227, 220, 0.85); }
+.direct { display: grid; gap: clamp(8px, 1.6svh, 14px); align-content: start; }
+.direct__label { font-size: 13px; color: rgba(227, 227, 220, 0.62); margin-bottom: 4px; }
+.direct__link { width: fit-content; font-family: var(--serif); font-size: clamp(22px, min(2.6vw, 4.4svh), 38px); line-height: 1.1; border-bottom: 1px solid transparent; transition: border-color 0.4s; overflow-wrap: anywhere; }
+.direct__link:hover { border-bottom-color: currentColor; }
+.footer__mark { margin-top: clamp(12px, 3svh, 52px); color: var(--paper); line-height: 0; text-align: center; }
+.footer__mark svg { display: inline-block; width: min(100%, calc(var(--mark-h, 15svh) * 3.05)); height: auto; }
+.footer__row { margin-top: clamp(12px, 2.4svh, 22px); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: rgba(227, 227, 220, 0.62); }
+.footer__row a:hover { color: var(--paper); }
+
+/* ---------- responsive ---------- */
+/* Narrow or very short windows: let blocks be as tall as their content instead of a full screen. */
+@media (max-width: 900px), (max-height: 560px) {
+  .paper > section, .case-row, .footer { min-height: 0; }
+  .paper > .brands { min-height: 0; }
+}
+@media (max-width: 900px) {
+  .section-head { flex-direction: column; align-items: flex-start; }
+  .section-note { text-align: left; }
+  .quiet { grid-template-columns: 1fr; }
+  .case-row { grid-template-columns: 1fr; row-gap: 48px; }
+  .c-wide, .c-left, .c-right, .c-center { grid-column: 1 / -1; margin-top: 0; --mh: 60svh; }
+  .c-wide, .c-center { --ar: 4 / 3; }
+  .case__media { height: auto; aspect-ratio: var(--ar, 4 / 5); max-height: 60svh; }
+  .team__cards { grid-template-columns: 1fr; height: auto; }
+  .person { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); min-height: 300px; }
+  .acc__head { grid-template-columns: 34px minmax(0, 1fr) 24px; }
+  .acc__lead { display: none; }
+  .acc__inner { padding-left: calc(34px + var(--gutter)); }
+  .footer__cols { grid-template-columns: 1fr; }
+  .footer__mark { --mark-h: 18svh; }
+}
+@media (max-width: 560px) {
+  .person { grid-template-columns: 1fr; }
+  .person__photo { aspect-ratio: 4 / 3.4; }
+  .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee__track { animation: none; }
+}
+
+/* ---------- case page ----------
+   The carousel's canvas stays fixed behind with the opened slide filling the window; this overlay
+   scrolls over it. Its first screen is transparent (the picture shows through) and the paper
+   sheet slides up over it like a curtain. Like the rest of the site, every block is about one
+   screen tall, and picture and text always share that screen. */
+.stage.is-fixed { position: fixed; inset: 0; z-index: 30; height: auto; }
+
+.cd {
+  position: fixed; inset: 0; z-index: 60;
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  scrollbar-width: none; color: var(--ink);
+}
+.cd::-webkit-scrollbar { display: none; }
+.cd[hidden] { display: none; }
+
+/* first screen: just the picture, with the name along the bottom */
+.cd-hero {
+  position: relative; height: 100svh; min-height: 520px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 var(--gutter) calc(var(--dock-bottom) + var(--island-h) + clamp(18px, 3svh, 32px)); color: #fff;
+}
+.cd-hero__tag { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.88; text-shadow: 0 1px 18px rgba(0, 0, 0, 0.35); }
+.cd-hero__title {
+  margin-top: 8px; font-family: var(--serif); font-weight: 500;
+  font-size: clamp(56px, min(11vw, 18svh), 190px); line-height: 0.9; letter-spacing: -0.02em;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
+}
+
+.cd-sheet { position: relative; background: var(--paper); border-radius: 32px 32px 0 0; padding-bottom: clamp(40px, 8svh, 100px); }
+
+.cd-intro {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: clamp(16px, 2svh, 24px) var(--gutter);
+  padding: clamp(112px, 19svh, 210px) var(--gutter) clamp(32px, 7svh, 90px);
+}
+.cd-intro .eyebrow { color: var(--ink-dim); padding-top: 0.5em; }
+.cd-intro__lead { font-family: var(--serif); font-weight: 400; font-size: clamp(26px, min(3.3vw, 5.6svh), 54px); line-height: 1.15; letter-spacing: -0.01em; max-width: 26em; }
+.cd-meta { grid-column: 2; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--gutter); margin-top: clamp(24px, 6svh, 70px); padding-top: 22px; border-top: 1px solid var(--rule); }
+.cd-meta__k { display: block; margin-bottom: 12px; font-size: 13px; color: var(--ink-dim); }
+.cd-meta .tags { margin: 0; }
+.cd-meta p { font-size: 16px; }
+
+/* picture and text, alternating sides */
+.cd-sec {
+  display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); align-items: center;
+  min-height: 100svh; padding: clamp(104px, 16svh, 180px) var(--gutter) clamp(28px, 6svh, 80px);
+}
+.cd-sec__img { grid-column: 1 / span 7; order: 1; }
+.cd-sec__text { grid-column: 9 / span 4; order: 2; }
+.cd-sec--flip .cd-sec__img { grid-column: 6 / span 7; order: 2; }
+.cd-sec--flip .cd-sec__text { grid-column: 1 / span 4; order: 1; }
+
+.cd-img {
+  position: relative; overflow: hidden; border-radius: 20px; height: min(66svh, 700px);
+  box-shadow: 0 30px 70px rgba(28, 33, 25, 0.18); will-change: transform;
+}
+.cd-img__in {
+  position: absolute; inset: -8%;
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.13) 50%, transparent calc(50% + 1px)),
+    linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.13) 50%, transparent calc(50% + 1px)),
+    radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.26), transparent 55%),
+    linear-gradient(var(--a, 135deg), var(--c1), var(--c2));
+}
+.cd-img__ph { position: absolute; left: 20px; top: 18px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
+
+.cd-kicker { display: flex; align-items: center; gap: 12px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); }
+.cd-kicker span { font-variant-numeric: tabular-nums; }
+.cd-kicker::before { content: none; }
+.cd-title { margin-top: clamp(10px, 2svh, 18px); font-family: var(--serif); font-weight: 500; font-size: clamp(30px, min(3.4vw, 6svh), 58px); line-height: 1.05; letter-spacing: -0.01em; }
+.cd-text { margin-top: clamp(12px, 2.4svh, 22px); max-width: 40ch; font-size: clamp(15px, 2.1svh, 18px); line-height: 1.55; color: var(--ink-dim); }
+
+/* the result: a dark block with one big word */
+.cd-result {
+  margin: 0 var(--gutter); border-radius: 28px; background: var(--forest); color: var(--paper);
+  padding: clamp(40px, 9svh, 110px) clamp(24px, 5vw, 80px); min-height: min(68svh, 620px);
+  display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--gutter); align-items: end;
+}
+.cd-result__big { font-family: var(--serif); font-weight: 400; font-size: clamp(72px, min(16vw, 30svh), 280px); line-height: 0.85; letter-spacing: -0.03em; }
+.cd-result__text { max-width: 30ch; font-size: clamp(18px, min(1.9vw, 3svh), 28px); line-height: 1.3; color: rgba(227, 227, 220, 0.85); }
+
+.cd-next { padding: clamp(40px, 9svh, 110px) var(--gutter) 0; display: grid; gap: clamp(28px, 6svh, 70px); }
+.cd-next__link { position: relative; display: block; overflow: hidden; border-radius: 24px; height: min(56svh, 520px); color: #fff; }
+.cd-next__bg {
+  position: absolute; inset: 0; transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+  background:
+    radial-gradient(circle at 70% 25%, rgba(255, 255, 255, 0.24), transparent 55%),
+    linear-gradient(135deg, var(--c1), var(--c2));
+}
+.cd-next__link:hover .cd-next__bg { transform: scale(1.04); }
+.cd-next__label { position: absolute; left: clamp(20px, 3vw, 40px); top: clamp(18px, 3svh, 32px); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; }
+.cd-next__name { position: absolute; left: clamp(20px, 3vw, 40px); bottom: clamp(36px, 7svh, 64px); font-family: var(--serif); font-weight: 500; font-size: clamp(44px, min(8vw, 14svh), 130px); line-height: 0.9; letter-spacing: -0.02em; }
+.cd-next__tag { position: absolute; left: clamp(20px, 3vw, 40px); bottom: clamp(14px, 2.4svh, 22px); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+.cd-cta { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-bottom: clamp(16px, 4svh, 48px); }
+.cd-cta p { font-family: var(--serif); font-size: clamp(26px, min(3vw, 5svh), 44px); line-height: 1.1; }
+.cd-cta .btn { background: var(--forest); color: var(--paper); }
+.cd-cta .btn:hover { background: #2f3f28; }
+
+@media (max-width: 900px) {
+  .cd-intro { grid-template-columns: 1fr; }
+  .cd-meta { grid-column: 1; grid-template-columns: 1fr; }
+  .cd-sec, .cd-sec--flip { min-height: 0; grid-template-columns: 1fr; row-gap: 24px; padding-top: 84px; padding-bottom: 28px; }
+  .cd-sec__img, .cd-sec--flip .cd-sec__img, .cd-sec__text, .cd-sec--flip .cd-sec__text { grid-column: 1; }
+  .cd-sec__img, .cd-sec--flip .cd-sec__img { order: 1; }
+  .cd-sec__text, .cd-sec--flip .cd-sec__text { order: 2; }
+  .cd-img { height: 52svh; }
+  .cd-result { grid-template-columns: 1fr; min-height: 0; }
+}
+
+/* ---------- menu: the "island" and its dock ----------
+   Two shapes that show a sharp piece of the nature photo. */
+:root {
+  --dock-bottom: clamp(14px, 3svh, 26px);
+  --island-w: 145px;
+  --island-h: 41px;
+  /* The menu button (and the case page's back ball) show a sharp slice of the photo, centred on the shape so
+     it stays put while the button shrinks. The island is glass instead, see .island__shape. */
+  --photo-dock: linear-gradient(rgba(6, 9, 12, 0.1), rgba(6, 9, 12, 0.2)), url('bg.webp') calc(50% + 141px) -392px / 640px auto;
+  --menu-ease: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* top: a trapezoid, wide at the screen edge, with softened corners */
+.island {
+  position: fixed; top: 0; left: calc(50% - var(--island-w) / 2); z-index: 76;
+  width: var(--island-w); height: var(--island-h);
+  transition: opacity 0.7s ease 0.1s;
+}
+/* a soft glow underneath, mostly outside the glass, so the island floats */
+.island__shadow {
+  position: absolute; inset: 0 16px; border-radius: 0 0 20px 20px;
+  background: rgba(0, 0, 0, 0.18); filter: blur(12px); transform: translateY(10px);
+}
+/* the glass itself: a creamy tint, the page behind it blurred and a touch more colourful, and a
+   hairline of light along the edge (the SVG below) like the other glass pieces of the site */
+.island__shape {
+  position: absolute; inset: 0; display: grid; place-items: center; color: var(--fg);
+  background: linear-gradient(rgba(246, 241, 234, 0.2), rgba(246, 241, 234, 0.09));
+  -webkit-backdrop-filter: blur(18px) saturate(1.35); backdrop-filter: blur(18px) saturate(1.35);
+  clip-path: path('M0 0 C7.5 0 11.25 2.7 13.75 8 L17.5 27.6 C19.4 35.6 25 41 35 41 L110 41 C120 41 125.6 35.6 127.5 27.6 L131.25 8 C133.75 2.7 137.5 0 145 0 Z');
+  transition: background 0.5s;
+}
+.island__edge { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.island__edge path { stroke: rgba(255, 255, 255, 0.34); stroke-width: 1; transition: stroke 0.5s; }
+.island:hover .island__shape { background: linear-gradient(rgba(246, 241, 234, 0.3), rgba(246, 241, 234, 0.15)); }
+.island__logo { display: block; margin-top: -2px; }
+.island__logo svg { display: block; height: 21px; width: auto; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.28)); }
+/* over the light paper a pale glass would vanish, so it turns smoky there */
+.island.is-paper .island__shape { background: linear-gradient(rgba(28, 33, 25, 0.62), rgba(28, 33, 25, 0.46)); }
+.island.is-paper:hover .island__shape { background: linear-gradient(rgba(28, 33, 25, 0.72), rgba(28, 33, 25, 0.56)); }
+.island.is-paper .island__edge path { stroke: rgba(255, 255, 255, 0.2); }
+
+/* bottom: a button as big as the island, which becomes a round "X" when the menu is open */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: var(--dock-bottom); z-index: 76;
+  display: flex; justify-content: center; pointer-events: none;
+  transition: bottom 1.1s var(--menu-ease) 1s;
+}
+.dock__btn {
+  position: relative; pointer-events: auto; overflow: hidden; cursor: pointer;
+  width: var(--island-w); height: var(--island-h); border-radius: calc(var(--island-h) / 2);
+  background: var(--photo-dock);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  display: grid; place-items: center;
+}
+.dock__btn::after { content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0); transition: background 0.35s; }
+.dock__btn:hover::after { background: rgba(255, 255, 255, 0.14); }
+.dock__btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+/* two lines that mean "menu" and turn into the "X" (menu.js moves them) */
+.dock__icon { position: absolute; left: 50%; top: 50%; width: 18px; height: 2px; margin: -1px 0 0 -9px; }
+.dock__icon i {
+  position: absolute; left: 0; right: 0; top: 0; height: 1.7px;
+  background: #fff; border-radius: 2px; box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+}
+
+/* off-screen while the loader plays, then they slide into place */
+html.is-loading .island { opacity: 0; }
+html.is-loading .dock { bottom: -90px; }
+
+/* open: a bright, soft veil over the page, with the list standing just above the ball */
+.menu-veil {
+  position: fixed; inset: 0; z-index: 74; visibility: hidden; opacity: 0; --veil-blur: 0px;
+  background: rgba(246, 241, 234, 0.8);
+  -webkit-backdrop-filter: blur(var(--veil-blur)) saturate(1.05) brightness(1.18);
+  backdrop-filter: blur(var(--veil-blur)) saturate(1.05) brightness(1.18);
+}
+.menu {
+  position: fixed; left: 0; right: 0; z-index: 76; visibility: hidden;
+  bottom: calc(var(--dock-bottom) + var(--island-h) + 16px);
+  display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none;
+}
+.menu a {
+  position: relative; pointer-events: auto; padding: 5px 6px;
+  font-size: 15px; font-weight: 500; color: var(--ink); will-change: transform, opacity, filter;
+}
+.menu a::after {
+  content: ''; position: absolute; left: 6px; right: 6px; bottom: 2px; height: 1px; background: currentColor;
+  transform: scaleX(0); transform-origin: right; transition: transform 0.5s var(--menu-ease);
+}
+.menu a:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* ---------- desktop header (restored) ----------
+   Wide screens keep the original header: logo on the left, navigation on the right. */
+html.is-loading .header { visibility: hidden; }
+html.has-case .header { visibility: hidden; }
+.header {
+  position: fixed; inset: 0 0 auto 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 22px var(--gutter);
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  transition: background-color 0.5s, border-color 0.5s; border-bottom: 1px solid transparent;
+}
+.header > * { pointer-events: auto; }
+.logo { display: block; color: #fff; transition: color 0.5s; }
+.logo svg { display: block; height: 22px; width: auto; }
+.nav { display: flex; gap: clamp(18px, 2vw, 30px); font-size: 15px; font-weight: 500; color: #fff; transition: color 0.5s; }
+.nav a { position: relative; padding: 2px 0; }
+.nav a::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: currentColor; transform: scaleX(0); transform-origin: right;
+  transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+.nav a:hover::after { transform: scaleX(1); transform-origin: left; }
+.header.is-paper {
+  background: rgba(227, 227, 220, 0.8);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-bottom-color: var(--rule);
+  text-shadow: none;
+}
+.header.is-paper .logo, .header.is-paper .nav { color: var(--ink); }
+
+/* Which menu where: the header on wide screens, the island and its button on phones. */
+@media (min-width: 769px) {
+  .island, .dock, .menu, .menu-veil { display: none; }
+}
+@media (max-width: 768px) {
+  .header { display: none; }
+}
+
+/* ---------- case page: close ----------
+   A glass ball in the top-right corner, the same material as the island at the top, with an "X".
+   Over the light paper sheet it turns smoky, like the island does (case.js toggles .is-paper). */
+.cd-ball {
+  --x-size: 33px;
+  position: fixed; z-index: 6; top: var(--dock-bottom); right: var(--gutter);
+  width: var(--x-size); height: var(--x-size); border-radius: 50%; cursor: pointer;
+  background: linear-gradient(rgba(246, 241, 234, 0.2), rgba(246, 241, 234, 0.09));
+  -webkit-backdrop-filter: blur(18px) saturate(1.35); backdrop-filter: blur(18px) saturate(1.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 8px 20px rgba(0, 0, 0, 0.14);
+  display: grid; place-items: center;
+  transition: background 0.5s, box-shadow 0.5s;
+}
+.cd-ball:hover { background: linear-gradient(rgba(246, 241, 234, 0.3), rgba(246, 241, 234, 0.15)); }
+.cd-ball.is-paper { background: linear-gradient(rgba(28, 33, 25, 0.62), rgba(28, 33, 25, 0.46)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 8px 20px rgba(0, 0, 0, 0.14); }
+.cd-ball.is-paper:hover { background: linear-gradient(rgba(28, 33, 25, 0.72), rgba(28, 33, 25, 0.56)); }
+.cd-ball__x { position: relative; width: 13px; height: 13px; transition: transform 0.5s var(--menu-ease); }
+.cd-ball__x i {
+  position: absolute; left: 0; right: 0; top: 50%; height: 1.7px; margin-top: -0.85px;
+  background: var(--fg); border-radius: 2px; box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+}
+.cd-ball__x i:first-child { transform: rotate(45deg); }
+.cd-ball__x i:last-child { transform: rotate(-45deg); }
+.cd-ball:hover .cd-ball__x { transform: rotate(90deg); }
+.cd-ball:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* while the menu is open the page behind is pale, so the glass pieces turn smoky, as over the paper */
+html.menu-open .island .island__shape { background: linear-gradient(rgba(28, 33, 25, 0.62), rgba(28, 33, 25, 0.46)); }
+html.menu-open .island .island__edge path { stroke: rgba(255, 255, 255, 0.2); }
+
+/* ---------- case page: the carousel card's headline, carried over ---------- */
+.cd-hero__lead {
+  position: absolute; left: var(--gutter); top: clamp(104px, 21svh, 230px);
+  color: #fff; font-family: var(--font); font-weight: 500; letter-spacing: 0;
+  --lead-fs: clamp(34px, min(5vw, 9svh), 76px);
+  font-size: var(--lead-fs); line-height: 1.12;
+}
+.cd-lead__h { margin: 0; font: inherit; }
+.cd-lead__h span { display: block; white-space: nowrap; }
+.cd-lead__sub { margin: 0.18em 0 0; font-size: 0.424em; font-weight: 400; line-height: 1.3; opacity: 0.85; }
+@media (max-width: 759px) {
+  .cd-hero__lead { --lead-fs: clamp(34px, 9.4vw, 46px); line-height: 1.08; top: clamp(96px, 17svh, 180px); }
+}
+/* the copy that flies over from the carousel card (see case.js): same text, fixed to the screen */
+.cd-fly { position: fixed !important; z-index: 55; margin: 0; transform-origin: 0 0; pointer-events: none; }
+.cd-fly .cd-lead__h span { white-space: nowrap; }
+
+/* ---------- real photos ---------- */
+.case__img.ph-photo { background-size: cover; background-position: center var(--focus, 50%); }
+.cd-img__in.has-photo { background-size: cover; background-position: center; }
+.cd-next__bg { background-size: cover; background-position: center; }
+
+/* ---------- menu: taps and swipes ---------- */
+.menu-veil, .menu { touch-action: none; }
+
+/* the close ball and the island share one line at the top on phones */
+@media (max-width: 768px) {
+  /* centred on the island's band: never above the screen, never below the trapezoid's bottom edge */
+  .cd-ball { top: calc((var(--island-h) - var(--x-size)) / 2); }
+}
