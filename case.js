@@ -136,11 +136,13 @@ window.CaseView = (function () {
     const closeBtn = $('#cdBack');
     island.classList.remove('is-paper');
     closeBtn.classList.remove('is-paper');
+    $('#header').classList.remove('is-sheet');
     track({ scrollTrigger: ScrollTrigger.create({
       scroller: overlay, trigger: '.cd-sheet', start: 'top 46px', end: 'bottom 46px',
       onToggle: (self) => {
         island.classList.toggle('is-paper', self.isActive);
         closeBtn.classList.toggle('is-paper', self.isActive);
+        $('#header').classList.toggle('is-sheet', self.isActive);   // desktop: the logo turns dark over the sheet
       },
     }) });
     ScrollTrigger.refresh();
@@ -161,7 +163,7 @@ window.CaseView = (function () {
   }
 
   const slugOf = (i) => PROJECTS[i].slug;
-  const hero = ['.header', '.hero__ui'];
+  const hero = ['.hero__ui'];
 
   // ---------- from the carousel ----------
   async function openFromCarousel(i) {
@@ -330,6 +332,7 @@ window.CaseView = (function () {
       stageEl.style.opacity = '';
     }
     root.classList.remove('has-case');
+    $('#header').classList.remove('is-sheet');
     const onPaper = !!(window.PaperTrigger && window.PaperTrigger.isActive);
     $('#island').classList.toggle('is-paper', onPaper);
     document.title = SITE_TITLE;
@@ -405,6 +408,12 @@ window.CaseView = (function () {
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape') requestClose(); });
   $('#cdBack').addEventListener('click', requestClose);
+  // desktop: the logo, which stays on screen over a case page, takes you back out of it
+  $('#header .logo').addEventListener('click', (e) => {
+    if (current < 0) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    requestClose();
+  }, true);
 
   // clicking a card's picture (or anywhere on the card) opens its case
   $('#casesGrid').addEventListener('click', (e) => {

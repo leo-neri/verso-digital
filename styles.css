@@ -529,7 +529,15 @@ html.is-loading .dock { bottom: -90px; }
 /* ---------- desktop header (restored) ----------
    Wide screens keep the original header: logo on the left, navigation on the right. */
 html.is-loading .header { visibility: hidden; }
-html.has-case .header { visibility: hidden; }
+/* on a case page the desktop header keeps only its logo, above the page, light over the picture and dark over the sheet */
+html.has-case .header, html.has-case .header.is-paper {
+  z-index: 70; background: none; border-bottom-color: transparent;
+  -webkit-backdrop-filter: none; backdrop-filter: none; transform: none !important; pointer-events: none;
+}
+html.has-case .header .logo { color: #fff; pointer-events: auto; }
+html.has-case .header.is-sheet .logo { color: var(--ink); }
+html.has-case .header .nav { opacity: 0 !important; visibility: hidden; pointer-events: none; }
+html.has-case .header.is-sheet { text-shadow: none; }
 .header {
   position: fixed; inset: 0 0 auto 0; z-index: 20;
   display: flex; justify-content: space-between; align-items: center;
